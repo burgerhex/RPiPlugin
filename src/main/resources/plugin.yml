@@ -1,0 +1,4 @@
+name: RPiPlugin
+version: '${project.version}'
+main: io.github.burgerhex.rpiplugin.RPiPlugin
+api-version: 1.17
