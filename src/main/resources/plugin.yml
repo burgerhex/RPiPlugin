@@ -7,3 +7,15 @@ commands:
   stopread:
     description: Stops reading from the RPi
     usage: /stopread
+  read:
+    description: Places border and inside
+    usage: /read
+  border:
+    description: Places border
+    usage: /border
+  inside:
+    description: Places inside
+    usage: /inside
+  period:
+    description: Sets period
+    usage: /period <seconds>
