@@ -4,25 +4,37 @@ import time
 import threading
 
 ROTARY_PORT = 2  # port A2
-SLEEP_TIME = 1
+SLEEP_TIME = 0.5
 
-# noinspection SpellCheckingInspection
-SERVER_HOST = "Avivs-MBP-2.mshome.net"
-SERVER_PORT = 57944
+PORT = 57944
 
 lock = threading.Lock()
 
-sock = socket.socket()
-sock.connect((SERVER_HOST, SERVER_PORT))
+# this is a dumb workaround that's needed to get the local ip of the rpi
+# with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+#     s.connect(("8.8.8.8", 80))
+#     HOST = s.getsockname()[0]
 
-while True:
-    msg = sock.recv(1024)
-    if msg:
-        print("received: " + msg.decode())
-        sock.send("hello server! from rpi".encode())
+with socket.socket() as server:
+    addr = ('', PORT)
+    print("hosting on:", addr)
+    print("binding...")
+    server.bind(addr)
+    print("listening...")
+    server.listen(1)
 
-    with lock:
-        rotary_reading = grovepi.analogRead(ROTARY_PORT)
-        print("rotary reading: " + rotary_reading)
+    print("waiting for connection...")
+    sock, addr = server.accept()
+    print("connected!")
 
-    time.sleep(SLEEP_TIME)
+    # TODO: one thread for sending, one thread for receiving
+
+    with sock:
+        print("Got a connection from:", addr)
+        while True:
+            with lock:
+                rotary_reading = grovepi.analogRead(ROTARY_PORT)
+                print(f"rotary reading: {rotary_reading}")
+                sock.send((str(rotary_reading) + "\n").encode())
+
+            time.sleep(SLEEP_TIME)
