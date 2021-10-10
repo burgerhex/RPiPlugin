@@ -15,26 +15,34 @@ lock = threading.Lock()
 #     s.connect(("8.8.8.8", 80))
 #     HOST = s.getsockname()[0]
 
-with socket.socket() as server:
-    addr = ('', PORT)
-    print("hosting on:", addr)
-    print("binding...")
-    server.bind(addr)
-    print("listening...")
-    server.listen(1)
+while True:
+    with socket.socket() as server:
+        addr = ('', PORT)
+        print("hosting on:", addr)
+        print("binding...")
+        server.bind(addr)
+        print("listening...")
+        server.listen(1)
 
-    print("waiting for connection...")
-    sock, addr = server.accept()
-    print("connected!")
+        print("waiting for connection...")
+        sock, addr = server.accept()
+        print("connected!")
 
-    # TODO: one thread for sending, one thread for receiving
+        # TODO: one thread for sending, one thread for receiving
 
-    with sock:
-        print("Got a connection from:", addr)
-        while True:
-            with lock:
-                rotary_reading = grovepi.analogRead(ROTARY_PORT)
-                print(f"rotary reading: {rotary_reading}")
-                sock.send((str(rotary_reading) + "\n").encode())
+        with sock:
+            print("Got a connection from:", addr)
+            broken = False
 
-            time.sleep(SLEEP_TIME)
+            while not broken:
+                with lock:
+                    rotary_reading = grovepi.analogRead(ROTARY_PORT)
+                    print(f"rotary reading: {rotary_reading}")
+                    try:
+                        sock.send((str(rotary_reading) + "\n").encode())
+                    except BrokenPipeError:
+                        broken = True
+
+                time.sleep(SLEEP_TIME)
+
+        print("Plugin instance lost, restarting...")
