@@ -29,6 +29,7 @@ while True:
         print("connected!")
 
         # TODO: one thread for sending, one thread for receiving
+        last_sent = None
 
         with sock:
             print("Got a connection from:", addr)
@@ -39,7 +40,9 @@ while True:
                     rotary_reading = grovepi.analogRead(ROTARY_PORT)
                     print(f"rotary reading: {rotary_reading}")
                     try:
-                        sock.send((str(rotary_reading) + "\n").encode())
+                        if last_sent is None or last_sent != rotary_reading:
+                            sock.send((str(rotary_reading) + "\n").encode())
+                            last_sent = rotary_reading
                     except BrokenPipeError:
                         broken = True
 
