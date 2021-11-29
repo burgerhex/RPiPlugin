@@ -1,12 +1,15 @@
 package io.github.burgerhex.rpiplugin;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Material;
-import org.bukkit.World;
+import org.bukkit.*;
+import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerMoveEvent;
+import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
@@ -17,7 +20,7 @@ import java.io.InputStreamReader;
 import java.net.Socket;
 import java.util.Optional;
 
-public final class RPiPlugin extends JavaPlugin {
+public final class RPiPlugin extends JavaPlugin implements Listener {
     public static final String HOST = "avivshai-pi";
     public static final int PORT = 57944;
 
@@ -35,6 +38,8 @@ public final class RPiPlugin extends JavaPlugin {
 
     @Override
     public void onEnable() {
+        getServer().getPluginManager().registerEvents(this, this);
+
         getLogger().info("Connecting to Raspberry Pi...");
 
         try {
@@ -125,15 +130,10 @@ public final class RPiPlugin extends JavaPlugin {
             if (dz == 0)
                 continue;
             int prevHeight = dzToHeight((dz > 0)? dz - 1 : dz + 1);
-//            if (dzToHeight.apply(dz) == prevHeight) {
-//                Location newLoc = center.clone().add(0, dzToHeight.apply(dz) + 1, dz);
-//                world.getBlockAt(newLoc).setType(Material.OBSIDIAN);
-//            } else {
             for (int dy = dzToHeight(dz) + 1; dy <= Math.max(dzToHeight(dz) + 1, prevHeight); dy++) {
                 Location newLoc = center.clone().add(0, dy, dz);
                 world.getBlockAt(newLoc).setType(Material.OBSIDIAN);
             }
-//            }
         }
 
         Location leftLoc = center.clone().add(0, 0, -RADIUS);
@@ -144,54 +144,40 @@ public final class RPiPlugin extends JavaPlugin {
         world.getBlockAt(topLoc).setType(Material.OBSIDIAN);
     }
 
-    @SuppressWarnings("CommentedOutCode")
     private void readAndPlaceInside() {
-//        int i = 0;
-//        while (true) {
-//            String line;
-//            try {
-        Integer reading = reader.getNext();
+        Integer reading = reader.getLatest();
         if (reading == null)
             return;
 
         getLogger().info("Received reading from RPi: " + reading);
-//                Bukkit.broadcastMessage("reading from rpi: " + line);
-//                getLogger().info("Attempting to set blocks...");
         double portion = reading / (double) MAX_READING;
         double angle = portion * Math.PI;
-//                getLogger().info("portion = " + portion + ", and angle = " +
-//                                 Math.toDegrees(angle) + " degrees");
         double tan = Math.tan(angle);
         double dx = 0;
 
         for (int dz = -RADIUS + 1; dz <= RADIUS - 1; dz++) {
             int height = dzToHeight(dz);
             double maxY = -tan * dz;
-//                    getLogger().info("starting dz = " + dz + ", which has height = " +
-//                                     "sqrt(" + RADIUS + "^2 - " + "(" + dz + ")^2) = " + height +
-//                                     ", and should stop placing at " + maxY);
-//                    getLogger().info("tan = " + tan + ", -tan * dz = " + maxY);
 
             for (int dy = 0; dy <= height; dy++) {
                 Location newLoc = center.clone().add(dx, dy, dz);
                 Material mat = ((dy <= maxY && portion < 0.5) || (dy > maxY && portion >= 0.5))?
                         Material.STONE : Material.AIR;
-//                        getLogger().info("setting (dz=" + dz + ", dy=" + dy + ") or (" +
-//                                         newLoc.getBlockX() + ", " + newLoc.getBlockY() + ", " +
-//                                         newLoc.getBlockZ() + ") to " + mat.name());
                 world.getBlockAt(newLoc).setType(mat);
             }
         }
 
+        world.getBlockAt(center).setType(Material.STONE);
 
-//            } catch (IOException e) {
-//                getLogger().warning("Error in receiving from RPi! Stopping...");
-//                e.printStackTrace();
-////                break;
-//            }
-//            i++;
+        if (0 < portion && portion < 1)
+            return;
+
+        Material bottomMat = (portion == 0)? Material.AIR : Material.STONE;
+        for (int dz = 1; dz <= RADIUS - 1; dz++) {
+            Location newLoc = center.clone().add(0, 0, dz);
+            world.getBlockAt(newLoc).setType(bottomMat);
+        }
     }
-//    }
 
     @Override
     public void onDisable() {
@@ -203,4 +189,24 @@ public final class RPiPlugin extends JavaPlugin {
             getLogger().warning("Couldn't close socket gracefully!");
         }
     }
+
+    // works but repeats
+//    @EventHandler
+//    public void onMove(PlayerMoveEvent e) {
+//        Player p = e.getPlayer();
+//        // filthy hack to get around Player.isOnGround being deprecated
+//        if (p.getVelocity().getY() > 0 && !((Entity) p).isOnGround()) {
+//            getLogger().info("jump from " + p.getDisplayName());
+//        }
+//    }
+
+    @EventHandler
+    public void onJump(PlayerStatisticIncrementEvent e) {
+        if (e.getStatistic() == Statistic.JUMP) {
+            getLogger().info("jump from " + e.getPlayer().getDisplayName());
+        }
+    }
+
+    // TODO: keep track of walking distance and sprinting distance
+
 }

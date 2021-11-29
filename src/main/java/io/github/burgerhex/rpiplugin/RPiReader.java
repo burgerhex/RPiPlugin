@@ -31,7 +31,7 @@ public class RPiReader {
         }
     }
 
-    public Integer getNext() {
+    public Integer getLatest() {
         return latestRead.get();
     }
 
