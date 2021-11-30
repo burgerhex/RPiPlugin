@@ -3,21 +3,41 @@
 <head>
     <meta charset="UTF-8">
     <title>Test</title>
+    <script type="text/javascript" src="smoothie.js"></script>
 
     <script>
-        socket = new WebSocket("ws://avivshai-pi:57945");
-        socket.addEventListener('open', (e) => console.log("socket opened"));
-        socket.addEventListener('close', (e) => console.log("socket closed"));
-        socket.addEventListener('error', (e) => console.log("socket error"));
-        socket.addEventListener('message', (e) => {
-            console.log("socket message: " + e.data);
-            document.getElementById("info").innerHTML += "\n" + e.data;
-        });
+        function init() {
+            console.log("getting canvas");
+            const canvas = document.getElementById("canvas");
+            console.log("the canvas:");
+            console.log(canvas);
+
+            // noinspection JSUnresolvedFunction
+            const smoothie = new SmoothieChart({ minValue: 0, maxValue: 1});
+            smoothie.streamTo(canvas, 500);
+            // noinspection JSUnresolvedFunction
+            const line = new TimeSeries();
+            smoothie.addTimeSeries(line,
+                { strokeStyle: 'rgb(0, 255, 0)', fillStyle: 'rgba(0, 255, 0, 0.3)', lineWidth: 3 });
+            console.log("created smoothie stuff");
+
+            const socket = new WebSocket("ws://avivshai-pi:57945");
+            socket.addEventListener('open', (e) => console.log("socket opened"));
+            socket.addEventListener('close', (e) => console.log("socket closed"));
+            socket.addEventListener('error', (e) => console.log("socket error"));
+            socket.addEventListener('message', (e) => {
+                console.log("socket message: " + e.data);
+                // console.log("type of message: " + (typeof e.data));
+                // console.log("parsed message: " + parseFloat(e.data));
+                line.append(new Date().getTime(), parseFloat(e.data));
+            });
+            console.log("created socket stuff");
+        }
     </script>
 </head>
-<body>
+<body onload="init()">
 
-<p id="info">nothing yet</p>
+<canvas id="canvas" width="400" height="100"></canvas>
 
 </body>
 </html>

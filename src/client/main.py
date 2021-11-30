@@ -1,8 +1,12 @@
+import math
+
 import grovepi
 import socket
 import time
 import threading
-import websocket
+import websockets
+import asyncio
+import random
 
 ROTARY_PORT = 2  # port A2
 BUTTON_PORT = 2  # port D2
@@ -21,7 +25,7 @@ socket_lock = threading.Lock()
 #     HOST = s.getsockname()[0]
 
 
-def rotary_recv_loop(server_socket):
+def rotary_recv_loop():
     last_sent = None
     broken = False
 
@@ -33,7 +37,7 @@ def rotary_recv_loop(server_socket):
         try:
             if last_sent is None or last_sent != rotary_reading:
                 with socket_lock:
-                    server_socket.send((str(rotary_reading) + "\n").encode())
+                    sock.send((str(rotary_reading) + "\n").encode())
                 last_sent = rotary_reading
         except BrokenPipeError:
             broken = True
@@ -41,17 +45,19 @@ def rotary_recv_loop(server_socket):
         time.sleep(SLEEP_TIME)
 
 
-def on_open(w):
-    w.send("Hello")
-    w.close()
-
-
-websocket.enableTrace(True)
-ws = websocket.WebSocketApp("ws://localhost:" + str(PORT + 1),
-                            on_open=on_open,
-                            on_message=lambda w, m: print(m),
-                            on_error=lambda w, e: print(e),
-                            on_close=lambda w: print("closed"))
+# async def counter(websocket, path):
+#     # register(websocket) sends user_event() to websocket
+#     print(f"new request: ws = {websocket}, path = {path}")
+#     await websocket.send("welcome")
+#     while True:
+#         time.sleep(0.5)
+#         rotary_reading = grovepi.analogRead(ROTARY_PORT)
+#         await websocket.send(str(rotary_reading / 1023))
+#
+# start_server = websockets.serve(counter, "0.0.0.0", PORT + 1)
+#
+# asyncio.get_event_loop().run_until_complete(start_server)
+# asyncio.get_event_loop().run_forever()
 
 
 while True:
@@ -67,12 +73,9 @@ while True:
         sock, addr = server.accept()
         print("connected!")
 
-        # TODO: one thread for sending, one thread for receiving
-
         with sock:
             print("Got a connection from:", addr)
-            t1 = threading.Thread(target=rotary_recv_loop, args=(sock,))
+            t1 = threading.Thread(target=rotary_recv_loop)
             t1.start()
-
 
         print("Plugin instance lost, restarting...")
