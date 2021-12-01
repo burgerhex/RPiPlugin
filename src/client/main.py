@@ -11,7 +11,7 @@ import random
 ROTARY_PORT = 2  # port A2
 BUTTON_PORT = 2  # port D2
 LED_PORT = 3  # port D3
-TEMPERATURE_PORT = 1  # port A1
+TEMPERATURE_PORT = 4  # port D4
 SLEEP_TIME = 0.5
 
 HOST = "35.236.43.231"
@@ -50,22 +50,25 @@ def rotary_recv_loop():
 
 
 def temp_recv_loop():
-    last_sent = None
+    last_sent_temp = None
+    last_sent_humidity = None
     broken = False
 
     while not broken:
         with grove_lock:
             try:
-                temp_reading = grovepi.temp(TEMPERATURE_PORT, '1.2')
+                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, '1.2')
             except ValueError:
                 pass
 
         try:
-            if last_sent is None or last_sent != temp_reading:
+            if last_sent_temp is None or last_sent_humidity is None or \
+                    last_sent_temp != temp_reading or last_sent_humidity != humidity_reading:
                 with socket_lock:
-                    sock.send(f"temp {temp_reading}\n".encode())
-                last_sent = temp_reading
-                print(f"new temp reading: {temp_reading}")
+                    sock.send(f"temp {temp_reading}\nhumidity {humidity_reading}".encode())
+                last_sent_temp = temp_reading
+                last_sent_humidity = humidity_reading
+                print(f"new temp and humidity readings: {temp_reading}, {humidity_reading}")
         except BrokenPipeError:
             broken = True
 

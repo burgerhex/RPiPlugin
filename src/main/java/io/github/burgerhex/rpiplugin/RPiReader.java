@@ -18,6 +18,8 @@ public class RPiReader {
     private final AtomicBoolean isLatestRotarySeen = new AtomicBoolean(false);
     private final AtomicInteger latestTempRead = new AtomicInteger(-1);
     private final AtomicBoolean isLatestTempSeen = new AtomicBoolean(false);
+    private final AtomicInteger latestHumidityRead = new AtomicInteger(-1);
+    private final AtomicBoolean isLatestHumiditySeen = new AtomicBoolean(false);
 
     public RPiReader(ServerSocket serverSocket, Logger logger) throws IOException {
         this.serverSocket = serverSocket;
@@ -52,6 +54,9 @@ public class RPiReader {
                             } else if (parts[0].equalsIgnoreCase("temp")) {
                                 latestTempRead.set(Integer.parseInt(parts[1]));
                                 isLatestTempSeen.set(false);
+                            } else if (parts[0].equalsIgnoreCase("humidity")) {
+                                latestHumidityRead.set(Integer.parseInt(parts[1]));
+                                isLatestHumiditySeen.set(false);
                             }
                         }
                     } catch (IOException e) {
@@ -86,6 +91,13 @@ public class RPiReader {
     public Integer getLatestTemp() {
         isLatestTempSeen.set(true);
         return latestTempRead.get();
+    }
+
+    public boolean isLatestHumiditySeen() { return isLatestHumiditySeen.get(); }
+
+    public Integer getLatestHumidity() {
+        isLatestHumiditySeen.set(true);
+        return latestHumidityRead.get();
     }
 
     public void stop() {
