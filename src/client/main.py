@@ -97,7 +97,10 @@ while True:
         print("connected to server!")
 
         t1 = threading.Thread(target=rotary_recv_loop)
+        t2 = threading.Thread(target=temp_recv_loop)
         t1.start()
+        t2.start()
         t1.join()
+        t2.join()
 
         print("Plugin instance lost, restarting...")
