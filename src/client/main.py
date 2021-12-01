@@ -55,7 +55,10 @@ def temp_recv_loop():
 
     while not broken:
         with grove_lock:
-            temp_reading = grovepi.temp(TEMPERATURE_PORT, '1.2')
+            try:
+                temp_reading = grovepi.temp(TEMPERATURE_PORT, '1.2')
+            except ValueError:
+                pass
 
         try:
             if last_sent is None or last_sent != temp_reading:
@@ -66,7 +69,7 @@ def temp_recv_loop():
         except BrokenPipeError:
             broken = True
 
-        time.sleep(SLEEP_TIME)
+        time.sleep(SLEEP_TIME * 3)
 
 
 async def counter(websocket, path):
