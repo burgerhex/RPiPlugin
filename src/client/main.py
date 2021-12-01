@@ -34,11 +34,11 @@ def rotary_recv_loop():
     broken = False
 
     while not broken:
-        print("rotary requesting lock")
+        # print("rotary requesting lock")
         with grove_lock:
-            print("rotary acquired lock")
+            # print("rotary acquired lock")
             rotary_reading = grovepi.analogRead(ROTARY_PORT)
-        print("rotary released lock")
+        # print("rotary released lock")
 
         try:
             if last_sent is None or last_sent != rotary_reading:
@@ -58,17 +58,20 @@ def temp_recv_loop():
     broken = False
 
     while not broken:
-        print("temp requesting lock")
+        # print("temp requesting lock")
         with grove_lock:
-            print("temp acquired lock")
+            # print("temp acquired lock")
             try:
-                print("reading temp")
-                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, '1.2')
-                print("done reading temp")
+                # print("reading temp")
+                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, 1)
+                # print("done reading temp")
+                if math.isnan(temp_reading) or math.isnan(humidity_reading):
+                    time.sleep(SLEEP_TIME * 3)
+                    continue
             except ValueError as e:
                 print(e)
                 pass
-        print("temp released lock")
+        # print("temp released lock")
 
         try:
             if last_sent_temp is None or last_sent_humidity is None or \
