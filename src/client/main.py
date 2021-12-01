@@ -1,5 +1,5 @@
 import math
-
+import sys
 import grovepi
 import socket
 import time
@@ -16,6 +16,9 @@ SLEEP_TIME = 0.5
 
 HOST = "35.236.43.231"
 PORT = 57944
+
+if len(sys.argv) > 1 and sys.argv[1] == "test":
+    HOST = "Avivs-MBP.mshome.net"
 
 grove_lock = threading.Lock()
 socket_lock = threading.Lock()
@@ -51,15 +54,20 @@ async def counter(websocket, path):
     print(f"new request: ws = {websocket}, path = {path}")
     await websocket.send("welcome")
     while True:
-        time.sleep(SLEEP_TIME)
+        await asyncio.sleep(SLEEP_TIME)
         rotary_reading = grovepi.analogRead(ROTARY_PORT)
         await websocket.send(str(rotary_reading / 1023))
 
-start_server = websockets.serve(counter, "0.0.0.0", PORT + 1)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+async def serve():
+    server = await websockets.serve(counter, "0.0.0.0", PORT + 1)
+    await server.wait_closed()
 
+
+# asyncio.get_event_loop().run_until_complete(start_server)
+# asyncio.get_event_loop().run_forever()
+loop = asyncio.get_event_loop()
+loop.create_task(serve())
 
 while True:
     with socket.socket() as sock:
