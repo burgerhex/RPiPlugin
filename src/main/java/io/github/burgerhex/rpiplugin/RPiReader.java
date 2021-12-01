@@ -33,6 +33,7 @@ public class RPiReader {
             try {
                 logger.info("Waiting for new connection from RPi...");
                 Socket socket = serverSocket.accept();
+                in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                 logger.info("Got a connection!");
 
                 while (!Thread.interrupted() && !serverSocket.isClosed() && !socket.isClosed()) {

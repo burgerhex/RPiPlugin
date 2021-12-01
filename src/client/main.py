@@ -37,12 +37,12 @@ def rotary_recv_loop():
         with grove_lock:
             rotary_reading = grovepi.analogRead(ROTARY_PORT)
 
-        print(f"rotary reading: {rotary_reading}")
         try:
             if last_sent is None or last_sent != rotary_reading:
                 with socket_lock:
                     sock.send((str(rotary_reading) + "\n").encode())
                 last_sent = rotary_reading
+                print(f"new rotary reading: {rotary_reading}")
         except BrokenPipeError:
             broken = True
 
