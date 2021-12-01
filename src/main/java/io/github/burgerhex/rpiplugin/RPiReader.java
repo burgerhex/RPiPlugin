@@ -13,17 +13,18 @@ public class RPiReader {
     private final ServerSocket serverSocket;
     private BufferedReader in;
     private final Logger logger;
-    private final AtomicInteger latestRead = new AtomicInteger(-1);
     private final Thread recvThread;
-    private final AtomicBoolean isLatestSeen;
+    private final AtomicInteger latestRotaryRead = new AtomicInteger(-1);
+    private final AtomicBoolean isLatestRotarySeen = new AtomicBoolean(false);
+    private final AtomicInteger latestTempRead = new AtomicInteger(-1);
+    private final AtomicBoolean isLatestTempSeen = new AtomicBoolean(false);
 
     public RPiReader(ServerSocket serverSocket, Logger logger) throws IOException {
         this.serverSocket = serverSocket;
         this.logger = logger;
         recvThread = new Thread(this::recvLoop);
-        logger.info("Making new thread: " + recvThread.getName());
         recvThread.start();
-        isLatestSeen = new AtomicBoolean(false);
+        logger.info("Making new thread: " + recvThread.getName());
     }
 
     private void recvLoop() {
@@ -43,13 +44,20 @@ public class RPiReader {
 //                logger.info(threadName + ": read line: " + line + ", which is " +
 //                            (line == null? "" : "not ") + "null");
                         if (line != null)  {
-                            latestRead.set(Integer.parseInt(line));
-                            isLatestSeen.set(false);
+                            String[] parts = line.split(" ");
+
+                            if (parts[0].equalsIgnoreCase("rotary")) {
+                                latestRotaryRead.set(Integer.parseInt(parts[1]));
+                                isLatestRotarySeen.set(false);
+                            } else if (parts[0].equalsIgnoreCase("temp")) {
+                                latestTempRead.set(Integer.parseInt(parts[1]));
+                                isLatestTempSeen.set(false);
+                            }
                         }
                     } catch (IOException e) {
                         e.printStackTrace();
                         break;
-                    } catch (NumberFormatException e) {
+                    } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
                         logger.info(threadName + ": malformed message from RPi: " + line);
                         try {
                             Thread.sleep(500);
@@ -66,11 +74,18 @@ public class RPiReader {
         System.out.println(threadName + ": stopping!");
     }
 
-    public boolean isLatestSeen() { return isLatestSeen.get(); }
+    public boolean isLatestRotarySeen() { return isLatestRotarySeen.get(); }
 
-    public Integer getLatest() {
-        isLatestSeen.set(true);
-        return latestRead.get();
+    public Integer getLatestRotary() {
+        isLatestRotarySeen.set(true);
+        return latestRotaryRead.get();
+    }
+
+    public boolean isLatestTempSeen() { return isLatestTempSeen.get(); }
+
+    public Integer getLatestTemp() {
+        isLatestTempSeen.set(true);
+        return latestTempRead.get();
     }
 
     public void stop() {

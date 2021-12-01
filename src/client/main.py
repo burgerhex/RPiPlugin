@@ -40,9 +40,29 @@ def rotary_recv_loop():
         try:
             if last_sent is None or last_sent != rotary_reading:
                 with socket_lock:
-                    sock.send((str(rotary_reading) + "\n").encode())
+                    sock.send(f"rotary {rotary_reading}\n".encode())
                 last_sent = rotary_reading
                 print(f"new rotary reading: {rotary_reading}")
+        except BrokenPipeError:
+            broken = True
+
+        time.sleep(SLEEP_TIME)
+
+
+def temp_recv_loop():
+    last_sent = None
+    broken = False
+
+    while not broken:
+        with grove_lock:
+            temp_reading = grovepi.temp(TEMPERATURE_PORT, '1.2')
+
+        try:
+            if last_sent is None or last_sent != temp_reading:
+                with socket_lock:
+                    sock.send(f"temp {temp_reading}\n".encode())
+                last_sent = temp_reading
+                print(f"new temp reading: {temp_reading}")
         except BrokenPipeError:
             broken = True
 
