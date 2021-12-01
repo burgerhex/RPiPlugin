@@ -14,6 +14,7 @@ LED_PORT = 3  # port D3
 TEMPERATURE_PORT = 1  # port A1
 SLEEP_TIME = 0.5
 
+HOST = "35.236.43.231"
 PORT = 57944
 
 grove_lock = threading.Lock()
@@ -45,37 +46,30 @@ def rotary_recv_loop():
         time.sleep(SLEEP_TIME)
 
 
-# async def counter(websocket, path):
-#     # register(websocket) sends user_event() to websocket
-#     print(f"new request: ws = {websocket}, path = {path}")
-#     await websocket.send("welcome")
-#     while True:
-#         time.sleep(0.5)
-#         rotary_reading = grovepi.analogRead(ROTARY_PORT)
-#         await websocket.send(str(rotary_reading / 1023))
-#
-# start_server = websockets.serve(counter, "0.0.0.0", PORT + 1)
-#
-# asyncio.get_event_loop().run_until_complete(start_server)
-# asyncio.get_event_loop().run_forever()
+async def counter(websocket, path):
+    # register(websocket) sends user_event() to websocket
+    print(f"new request: ws = {websocket}, path = {path}")
+    await websocket.send("welcome")
+    while True:
+        time.sleep(SLEEP_TIME)
+        rotary_reading = grovepi.analogRead(ROTARY_PORT)
+        await websocket.send(str(rotary_reading / 1023))
+
+start_server = websockets.serve(counter, "0.0.0.0", PORT + 1)
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
 
 
 while True:
-    with socket.socket() as server:
-        addr = ('', PORT)
-        print("hosting on:", addr)
-        print("binding...")
-        server.bind(addr)
-        print("listening...")
-        server.listen(1)
+    with socket.socket() as sock:
+        addr = (HOST, PORT)
+        print("connecting to:", addr)
+        sock.connect(addr)
+        print("connected to server!")
 
-        print("waiting for connection...")
-        sock, addr = server.accept()
-        print("connected!")
-
-        with sock:
-            print("Got a connection from:", addr)
-            t1 = threading.Thread(target=rotary_recv_loop)
-            t1.start()
+        t1 = threading.Thread(target=rotary_recv_loop)
+        t1.start()
+        t1.join()
 
         print("Plugin instance lost, restarting...")

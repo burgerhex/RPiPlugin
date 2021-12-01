@@ -5,31 +5,90 @@
     <title>Test</title>
     <script type="text/javascript" src="smoothie.js"></script>
 
+    <!--suppress JSUnresolvedFunction -->
     <script>
         function init() {
-            console.log("getting canvas");
-            const canvas = document.getElementById("canvas");
-            console.log("the canvas:");
-            console.log(canvas);
+            const jumpCanvas = document.getElementById("canvas1");
+            const runCanvas = document.getElementById("canvas2");
+            const randomCanvas = document.getElementById("canvas3");
 
-            // noinspection JSUnresolvedFunction
-            const smoothie = new SmoothieChart({ minValue: 0, maxValue: 1});
-            smoothie.streamTo(canvas, 500);
-            // noinspection JSUnresolvedFunction
-            const line = new TimeSeries();
-            smoothie.addTimeSeries(line,
+            const jumpSmoothie = new SmoothieChart();
+            const runSmoothie = new SmoothieChart();
+            const randomSmoothie = new SmoothieChart({ minValue: 0, maxValue: 1});
+
+            jumpSmoothie.streamTo(jumpCanvas, 500);
+            runSmoothie.streamTo(runCanvas, 500);
+            randomSmoothie.streamTo(randomCanvas, 1000);
+
+            const jumpLines = {};
+            const runLines = {};
+            const randomLine = new TimeSeries();
+
+            randomSmoothie.addTimeSeries(randomLine,
                 { strokeStyle: 'rgb(0, 255, 0)', fillStyle: 'rgba(0, 255, 0, 0.3)', lineWidth: 3 });
-            console.log("created smoothie stuff");
 
-            const socket = new WebSocket("ws://avivshai-pi:57945");
-            socket.addEventListener('open', (e) => console.log("socket opened"));
-            socket.addEventListener('close', (e) => console.log("socket closed"));
-            socket.addEventListener('error', (e) => console.log("socket error"));
+            setInterval(() => {
+                randomLine.append(new Date().getTime(), Math.random());
+            }, 1000);
+
+            // TODO: do jump stuff here. have a line for each player, add new ones when new players
+            // are sent. messages contain players and events, i.e. burgerhex - jump
+            // then here we add 1 to burgerhex's jumps
+
+            // const socket = new WebSocket("ws://avivshai-pi:57945");
+            // const socket = new WebSocket("ws://Avivs-MacBook-Pro.local:57945");
+            // const socket = new WebSocket("ws://Avivs-MBP.mshome.net:57945");
+            const socket = new WebSocket("ws://192.168.137.190:57945");
+            // socket.send("asdf")
+            socket.addEventListener('open', () => console.log("socket opened"));
+            socket.addEventListener('close', () => console.log("socket closed"));
+            socket.addEventListener('error', () => console.log("socket error"));
             socket.addEventListener('message', (e) => {
                 console.log("socket message: " + e.data);
-                // console.log("type of message: " + (typeof e.data));
-                // console.log("parsed message: " + parseFloat(e.data));
-                line.append(new Date().getTime(), parseFloat(e.data));
+                const data = JSON.parse(e.data);
+                const jumpData = data["jump"];
+                const runData = data["run"];
+                // const randomData = data["random"];
+                console.log(jumpData);
+                console.log(runData);
+                if (jumpData !== undefined) {
+                    console.log("parsing jump data");
+                    for (const user in jumpData) {
+                        const jumps = jumpData[user];
+                        console.log("user " + user + ", jumps = " + jumps);
+                        if (jumpLines[user] === undefined) {
+                            jumpLines[user] = new TimeSeries();
+                            const r = Math.floor(Math.random() * 256);
+                            const g = Math.floor(Math.random() * 256);
+                            const b = Math.floor(Math.random() * 256);
+                            const stroke = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+                            const fill = 'rgb(' + r + ', ' + g + ', ' + b + ', 0.3)';
+                            jumpSmoothie.addTimeSeries(jumpLines[user],
+                                { strokeStyle: stroke, fillStyle: fill, lineWidth: 3 });
+                        }
+                        jumpLines[user].append(new Date().getTime(), jumps);
+                    }
+                }
+                if (runData !== undefined) {
+                    console.log("parsing run data");
+                    for (const user in runData) {
+                        const distance = runData[user];
+                        console.log("user " + user + ", distance = " + distance);
+                        if (runLines[user] === undefined) {
+                            runLines[user] = new TimeSeries();
+                            const r = Math.floor(Math.random() * 256);
+                            const g = Math.floor(Math.random() * 256);
+                            const b = Math.floor(Math.random() * 256);
+                            const stroke = 'rgb(' + r + ', ' + g + ', ' + b + ')';
+                            const fill = 'rgba(' + r + ', ' + g + ', ' + b + ', 0.3)';
+                            runSmoothie.addTimeSeries(runLines[user],
+                                { strokeStyle: stroke, fillStyle: fill, lineWidth: 3 });
+                        }
+                        runLines[user].append(new Date().getTime(), distance);
+                    }
+                }
+
+                // line.append(new Date().getTime(), parseFloat(e.data));
             });
             console.log("created socket stuff");
         }
@@ -37,7 +96,9 @@
 </head>
 <body onload="init()">
 
-<canvas id="canvas" width="400" height="100"></canvas>
+<canvas id="canvas1" width="200" height="100"></canvas>
+<canvas id="canvas2" width="200" height="100"></canvas>
+<canvas id="canvas3" width="200" height="100"></canvas>
 
 </body>
 </html>

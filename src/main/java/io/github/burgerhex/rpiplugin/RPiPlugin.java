@@ -1,33 +1,34 @@
 package io.github.burgerhex.rpiplugin;
 
 import org.bukkit.*;
-import org.bukkit.block.BlockFace;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.net.ServerSocket;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 public final class RPiPlugin extends JavaPlugin implements Listener {
-    public static final String HOST = "avivshai-pi";
+    public static final String HOST = "68.181.16.101";
     public static final int PORT = 57944;
 
     public static final int MAX_READING = 1023;
     public static final int RADIUS = 10;
 
-    private Socket socket;
+//    private Socket socket;
+    private ServerSocket serverSocket;
+    private StatsWebSocketServer wss;
     private RPiReader reader;
     private BukkitRunnable readLoop;
     private BukkitTask readLoopTask;
@@ -35,19 +36,23 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
     private World world;
     private Location center;
 
+    private final Map<UUID, Integer> initialJumps = new HashMap<>();
+
 
     @Override
     public void onEnable() {
         getServer().getPluginManager().registerEvents(this, this);
 
-        getLogger().info("Connecting to Raspberry Pi...");
-
         try {
-            socket = new Socket(HOST, PORT);
-            getLogger().info("Connected to Raspberry Pi!");
+            getLogger().info("Opening WebSocket server...");
+            wss = new StatsWebSocketServer("0.0.0.0", PORT + 1, getLogger());
+//            getLogger().info("Connecting to Raspberry Pi (" + HOST + ":" + PORT + ")...");
+//            socket = new Socket(HOST, PORT);
+//            getLogger().info("Connected to Raspberry Pi!");
+            getLogger().info("Opening other TCP server...");
+            serverSocket = new ServerSocket(PORT);
 
-            BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            reader = new RPiReader(in, getLogger());
+            reader = new RPiReader(serverSocket, getLogger());
 
             Optional<World> worldOpt = Bukkit.getServer().getWorlds().stream().filter(
                     (w) -> w.getEnvironment().equals(World.Environment.NORMAL)).findFirst();
@@ -64,10 +69,10 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
             };
             readLoopTask = readLoop.runTaskTimer(this, 0, 20);
         } catch (IOException e) {
-            getLogger().warning("Couldn't connect to server; aborting!");
+            getLogger().warning("Couldn't start server; aborting!");
         }
 
-        getLogger().info("done with enable");
+        getLogger().info("Done with enable!");
     }
 
     @Override
@@ -145,7 +150,11 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
     }
 
     private void readAndPlaceInside() {
+        if (reader.isLatestSeen())
+            return;
+
         Integer reading = reader.getLatest();
+
         if (reading == null)
             return;
 
@@ -183,27 +192,41 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
     public void onDisable() {
         try {
             System.out.println("Closing socket...");
-            if (socket != null)
-                socket.close();
+            if (serverSocket != null)
+                serverSocket.close();
         } catch (IOException e) {
             getLogger().warning("Couldn't close socket gracefully!");
         }
-    }
 
-    // works but repeats
-//    @EventHandler
-//    public void onMove(PlayerMoveEvent e) {
-//        Player p = e.getPlayer();
-//        // filthy hack to get around Player.isOnGround being deprecated
-//        if (p.getVelocity().getY() > 0 && !((Entity) p).isOnGround()) {
-//            getLogger().info("jump from " + p.getDisplayName());
-//        }
-//    }
+        try {
+            System.out.println("Closing reader...");
+            if (reader != null)
+                reader.stop();
+        } catch (Exception e) {
+            getLogger().warning("Couldn't close reader gracefully!");
+        }
+
+        try {
+            System.out.println("Closing WebSocket server...");
+            if (wss != null)
+                wss.stop();
+        } catch (InterruptedException e) {
+            getLogger().warning("Couldn't close WebSocket server gracefully!");
+        }
+    }
 
     @EventHandler
     public void onJump(PlayerStatisticIncrementEvent e) {
         if (e.getStatistic() == Statistic.JUMP) {
-            getLogger().info("jump from " + e.getPlayer().getDisplayName());
+            Player p = e.getPlayer();
+            UUID id = p.getUniqueId();
+            getLogger().info("jump from " + p.getDisplayName() + "(" + id + ")");
+
+            if (!initialJumps.containsKey(id))
+                initialJumps.put(id, e.getPlayer().getStatistic(Statistic.JUMP) - 1);
+
+            int newJumps = e.getNewValue() - initialJumps.get(id);
+            wss.broadcast("{\"jump\": {\"" + p.getDisplayName() + "\": " + newJumps + "}}");
         }
     }
 
