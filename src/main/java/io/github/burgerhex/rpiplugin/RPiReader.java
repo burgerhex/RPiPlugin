@@ -47,6 +47,7 @@ public class RPiReader {
 //                            (line == null? "" : "not ") + "null");
                         if (line != null)  {
                             String[] parts = line.split(" ");
+                            logger.info(String.join(" ", parts));
 
                             if (parts[0].equalsIgnoreCase("rotary")) {
                                 latestRotaryRead.set(Integer.parseInt(parts[1]));

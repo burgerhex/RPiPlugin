@@ -1,9 +1,6 @@
 package io.github.burgerhex.rpiplugin;
 
-import org.bukkit.Bukkit;
-import org.bukkit.Location;
-import org.bukkit.Statistic;
-import org.bukkit.World;
+import org.bukkit.*;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -12,6 +9,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.util.Vector;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -87,7 +85,7 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
                     setFire();
                 }
             };
-            readRunsLoop.runTaskTimer(this, 0, 40);
+            setFireLoop.runTaskTimer(this, 0, 40);
         } catch (IOException e) {
             getLogger().warning("Couldn't start server; aborting!");
         }
@@ -144,7 +142,32 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
     }
 
     private void setFire() {
+        if (reader.isLatestTempSeen())
+            return;
 
+        Integer temp = reader.getLatestTemp();
+
+        if (temp == -1)
+            return;
+
+        int minTemp = 24;
+        int maxTemp = 32;
+
+        if (temp < minTemp)
+            temp = minTemp;
+        if (temp > maxTemp)
+            temp = maxTemp;
+
+        double chance = (double) (temp - minTemp) / (maxTemp - minTemp);
+
+        Random r = new Random(PORT); // seeded
+        int y = fireY;
+        for (int x = fireStartX; x <= fireEndX; x++) {
+            for (int z = fireStartZ; z <= fireEndZ; z++) {
+                Material mat = (r.nextDouble() < chance)? Material.FIRE : Material.AIR;
+                world.getBlockAt(new Location(world, x, y, z)).setType(mat);
+            }
+        }
     }
 
 //    private int dzToHeight(int dz) {

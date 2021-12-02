@@ -64,8 +64,11 @@ def temp_recv_loop():
             try:
                 # print("reading temp")
                 temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, 1)
+                time.sleep(SLEEP_TIME)
+                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, 1)
                 # print("done reading temp")
                 if math.isnan(temp_reading) or math.isnan(humidity_reading):
+                    print("nans, skipping")
                     time.sleep(SLEEP_TIME * 3)
                     continue
             except ValueError as e:
@@ -77,7 +80,7 @@ def temp_recv_loop():
             if last_sent_temp is None or last_sent_humidity is None or \
                     last_sent_temp != temp_reading or last_sent_humidity != humidity_reading:
                 with socket_lock:
-                    sock.send(f"temp {temp_reading}\nhumidity {humidity_reading}".encode())
+                    sock.send(f"temp {temp_reading}\nhumidity {humidity_reading}\n".encode())
                 last_sent_temp = temp_reading
                 last_sent_humidity = humidity_reading
                 print(f"new temp and humidity readings: {temp_reading}, {humidity_reading}")
