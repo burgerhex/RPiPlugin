@@ -63,9 +63,7 @@ def temp_recv_loop():
             # print("temp acquired lock")
             try:
                 # print("reading temp")
-                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, 1)
-                time.sleep(SLEEP_TIME)
-                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, 1)
+                temp_reading, humidity_reading = grovepi.dht(TEMPERATURE_PORT, 0)
                 # print("done reading temp")
                 if math.isnan(temp_reading) or math.isnan(humidity_reading):
                     print("nans, skipping")
