@@ -33,8 +33,14 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
     private int fireStartX = 254;
     private int fireEndX = 268;
     private int fireStartZ = 118;
-    private int fireEndZ = 127;
-    private int fireY = 74;
+    private int fireEndZ = 150;
+    private int fireY = 73;
+
+    private int parkourStartX1 = 259;
+    private int parkourStartX2 = 265;
+    private int parkourStartZ = 182;
+    private int parkourY = 78;
+    private boolean isParkour1 = true;
 
     private final Map<UUID, Integer> initialJumps = new HashMap<>();
     private final Map<UUID, Integer> initialRuns = new HashMap<>();
@@ -86,6 +92,14 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
                 }
             };
             setFireLoop.runTaskTimer(this, 0, 40);
+
+            BukkitRunnable setParkourLoop = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    setParkourJumps();
+                }
+            };
+            setParkourLoop.runTaskTimer(this, 0, 20);
         } catch (IOException e) {
             getLogger().warning("Couldn't start server; aborting!");
         }
@@ -145,7 +159,7 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
         if (reader.isLatestTempSeen())
             return;
 
-        Integer temp = reader.getLatestTemp();
+        int temp = reader.getLatestTemp();
 
         if (temp == -1)
             return;
@@ -166,6 +180,39 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
             for (int z = fireStartZ; z <= fireEndZ; z++) {
                 Material mat = (r.nextDouble() < chance)? Material.FIRE : Material.AIR;
                 world.getBlockAt(new Location(world, x, y, z)).setType(mat);
+            }
+        }
+    }
+
+    private void setParkourJumps() {
+        if (!reader.getButtonPressed())
+            return;
+
+        setParkourTo(Material.CRACKED_STONE_BRICKS, isParkour1);
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                setParkourTo(Material.AIR, isParkour1);
+                setParkourTo(Material.AIR, !isParkour1);
+                isParkour1 = !isParkour1;
+            }
+        }.runTaskLater(this, 30); // 1.5s delay
+    }
+
+    int[] lengths = {3, 3, 3, 4, 1, 1, 1, 1, 1, 1, 1, 3, 3};
+
+    private void setParkourTo(Material material, boolean isSetting1) {
+        int start = isSetting1? parkourStartX1 : parkourStartX2;
+
+        int z = parkourStartZ;
+        for (int i = 0; i < lengths.length; i++) {
+            Material toSet = (i % 2 == 0)? material : Material.AIR;
+            for (int length = 0; length < lengths[i]; length++) {
+                for (int x = start; x < start + 3; x++) {
+                    world.getBlockAt(new Location(world, x, parkourY, z)).setType(toSet);
+                }
+                z++;
             }
         }
     }

@@ -20,6 +20,7 @@ public class RPiReader {
     private final AtomicBoolean isLatestTempSeen = new AtomicBoolean(false);
     private final AtomicInteger latestHumidityRead = new AtomicInteger(-1);
     private final AtomicBoolean isLatestHumiditySeen = new AtomicBoolean(false);
+    private final AtomicBoolean isButtonPressed = new AtomicBoolean(false);
 
     public RPiReader(ServerSocket serverSocket, Logger logger) throws IOException {
         this.serverSocket = serverSocket;
@@ -53,11 +54,13 @@ public class RPiReader {
                                 latestRotaryRead.set(Integer.parseInt(parts[1]));
                                 isLatestRotarySeen.set(false);
                             } else if (parts[0].equalsIgnoreCase("temp")) {
-                                latestTempRead.set(Integer.parseInt(parts[1]));
+                                latestTempRead.set((int) Double.parseDouble(parts[1]));
                                 isLatestTempSeen.set(false);
                             } else if (parts[0].equalsIgnoreCase("humidity")) {
-                                latestHumidityRead.set(Integer.parseInt(parts[1]));
+                                latestHumidityRead.set((int) Double.parseDouble(parts[1]));
                                 isLatestHumiditySeen.set(false);
+                            } else if (parts[0].equalsIgnoreCase("button")) {
+                                isButtonPressed.set(true);
                             }
                         }
                     } catch (IOException e) {
@@ -82,23 +85,31 @@ public class RPiReader {
 
     public boolean isLatestRotarySeen() { return isLatestRotarySeen.get(); }
 
-    public Integer getLatestRotary() {
+    public int getLatestRotary() {
         isLatestRotarySeen.set(true);
         return latestRotaryRead.get();
     }
 
     public boolean isLatestTempSeen() { return isLatestTempSeen.get(); }
 
-    public Integer getLatestTemp() {
+    public int getLatestTemp() {
         isLatestTempSeen.set(true);
         return latestTempRead.get();
     }
 
     public boolean isLatestHumiditySeen() { return isLatestHumiditySeen.get(); }
 
-    public Integer getLatestHumidity() {
+    public int getLatestHumidity() {
         isLatestHumiditySeen.set(true);
         return latestHumidityRead.get();
+    }
+
+    public boolean getButtonPressed() {
+        if (isButtonPressed.get()) {
+            isButtonPressed.set(false);
+            return true;
+        }
+        return false;
     }
 
     public void stop() {

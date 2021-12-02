@@ -52,6 +52,24 @@ def rotary_recv_loop():
         time.sleep(SLEEP_TIME)
 
 
+def button_recv_loop():
+    broken = False
+
+    while not broken:
+        with grove_lock:
+            button_reading = grovepi.digitalRead(BUTTON_PORT)
+
+        try:
+            if button_reading:
+                with socket_lock:
+                    sock.send(f"button\n".encode())
+                print(f"button pressed")
+        except BrokenPipeError:
+            broken = True
+
+        time.sleep(SLEEP_TIME)
+
+
 def temp_recv_loop():
     last_sent_temp = None
     last_sent_humidity = None
@@ -67,7 +85,7 @@ def temp_recv_loop():
                 # print("done reading temp")
                 if math.isnan(temp_reading) or math.isnan(humidity_reading):
                     print("nans, skipping")
-                    time.sleep(SLEEP_TIME * 3)
+                    time.sleep(SLEEP_TIME)
                     continue
             except ValueError as e:
                 print(e)
@@ -85,7 +103,7 @@ def temp_recv_loop():
         except BrokenPipeError:
             broken = True
 
-        time.sleep(SLEEP_TIME * 3)
+        time.sleep(SLEEP_TIME)
 
 
 async def counter(websocket, path):
@@ -117,9 +135,12 @@ while True:
 
         t1 = threading.Thread(target=rotary_recv_loop)
         t2 = threading.Thread(target=temp_recv_loop)
+        t3 = threading.Thread(target=button_recv_loop)
         t1.start()
         t2.start()
+        t3.start()
         t1.join()
         t2.join()
+        t3.join()
 
         print("Plugin instance lost, restarting...")
