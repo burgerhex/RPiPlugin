@@ -20,6 +20,7 @@
             runSmoothie.streamTo(runCanvas, 500);
             randomSmoothie.streamTo(randomCanvas, 1000);
 
+            const userColors = {}
             const jumpLines = {};
             const runLines = {};
             const randomLine = new TimeSeries();
@@ -59,9 +60,15 @@
                         console.log("user " + user + ", jumps = " + jumps);
                         if (jumpLines[user] === undefined) {
                             jumpLines[user] = new TimeSeries();
-                            const r = Math.floor(Math.random() * 256);
-                            const g = Math.floor(Math.random() * 256);
-                            const b = Math.floor(Math.random() * 256);
+                            let r = 0, g = 0, b = 0;
+                            if (userColors[user] === undefined) {
+                                r = Math.floor(Math.random() * 256);
+                                g = Math.floor(Math.random() * 256);
+                                b = Math.floor(Math.random() * 256);
+                                userColors[user] = [r, g, b];
+                            } else {
+                                [r, g, b] = userColors[user];
+                            }
                             const stroke = 'rgb(' + r + ', ' + g + ', ' + b + ')';
                             const fill = 'rgb(' + r + ', ' + g + ', ' + b + ', 0.3)';
                             jumpSmoothie.addTimeSeries(jumpLines[user],
@@ -77,9 +84,15 @@
                         console.log("user " + user + ", distance = " + distance);
                         if (runLines[user] === undefined) {
                             runLines[user] = new TimeSeries();
-                            const r = Math.floor(Math.random() * 256);
-                            const g = Math.floor(Math.random() * 256);
-                            const b = Math.floor(Math.random() * 256);
+                            let r = 0, g = 0, b = 0;
+                            if (userColors[user] === undefined) {
+                                r = Math.floor(Math.random() * 256);
+                                g = Math.floor(Math.random() * 256);
+                                b = Math.floor(Math.random() * 256);
+                                userColors[user] = [r, g, b];
+                            } else {
+                                [r, g, b] = userColors[user];
+                            }
                             const stroke = 'rgb(' + r + ', ' + g + ', ' + b + ')';
                             const fill = 'rgba(' + r + ', ' + g + ', ' + b + ', 0.3)';
                             runSmoothie.addTimeSeries(runLines[user],

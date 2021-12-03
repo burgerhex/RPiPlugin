@@ -49,7 +49,7 @@ def rotary_recv_loop():
         except BrokenPipeError:
             broken = True
 
-        time.sleep(SLEEP_TIME)
+        time.sleep(SLEEP_TIME / 2)
 
 
 def button_recv_loop():
@@ -67,7 +67,7 @@ def button_recv_loop():
         except BrokenPipeError:
             broken = True
 
-        time.sleep(SLEEP_TIME)
+        time.sleep(SLEEP_TIME / 2)
 
 
 def temp_recv_loop():

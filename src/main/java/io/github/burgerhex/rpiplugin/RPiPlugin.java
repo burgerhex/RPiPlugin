@@ -9,7 +9,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerStatisticIncrementEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.util.Vector;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -19,7 +18,7 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
 //    public static final String HOST = "68.181.16.101";
     public static final int PORT = 57944;
 
-    public static final int MAX_READING = 1023;
+    public static final int MAX_ROTARY_READING = 1023;
 //    public static final int RADIUS = 15;
 
 //    private Socket socket;
@@ -29,18 +28,9 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
 //    private BukkitTask readLoopTask;
 
     private World world;
-//    private Location center;
-    private int fireStartX = 254;
-    private int fireEndX = 268;
-    private int fireStartZ = 118;
-    private int fireEndZ = 150;
-    private int fireY = 73;
 
-    private int parkourStartX1 = 259;
-    private int parkourStartX2 = 265;
-    private int parkourStartZ = 182;
-    private int parkourY = 78;
     private boolean isParkour1 = true;
+    private boolean isButtonExecuting = false;
 
     private final Map<UUID, Integer> initialJumps = new HashMap<>();
     private final Map<UUID, Integer> initialRuns = new HashMap<>();
@@ -91,7 +81,7 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
                     setFire();
                 }
             };
-            setFireLoop.runTaskTimer(this, 0, 40);
+            setFireLoop.runTaskTimer(this, 0, 20);
 
             BukkitRunnable setParkourLoop = new BukkitRunnable() {
                 @Override
@@ -99,7 +89,15 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
                     setParkourJumps();
                 }
             };
-            setParkourLoop.runTaskTimer(this, 0, 20);
+            setParkourLoop.runTaskTimer(this, 0, 10);
+
+            BukkitRunnable setWallsLoop = new BukkitRunnable() {
+                @Override
+                public void run() {
+                    setWalls();
+                }
+            };
+            setWallsLoop.runTaskTimer(this, 0, 5);
         } catch (IOException e) {
             getLogger().warning("Couldn't start server; aborting!");
         }
@@ -156,6 +154,13 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
     }
 
     private void setFire() {
+        // hard coded for convenience but could use in-game commands to set these
+        int fireY = 73;
+        int fireEndX = 268;
+        int fireStartX = 258;
+        int fireEndZ = 150;
+        int fireStartZ = 118;
+
         if (reader.isLatestTempSeen())
             return;
 
@@ -175,35 +180,52 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
         double chance = (double) (temp - minTemp) / (maxTemp - minTemp);
 
         Random r = new Random(PORT); // seeded
-        int y = fireY;
         for (int x = fireStartX; x <= fireEndX; x++) {
             for (int z = fireStartZ; z <= fireEndZ; z++) {
                 Material mat = (r.nextDouble() < chance)? Material.FIRE : Material.AIR;
-                world.getBlockAt(new Location(world, x, y, z)).setType(mat);
+                if (world.getBlockAt(new Location(world, x, fireY - 1, z)).getType() == Material.NETHER_BRICKS)
+                    mat = Material.AIR;
+                world.getBlockAt(new Location(world, x, fireY, z)).setType(mat);
             }
         }
     }
 
     private void setParkourJumps() {
-        if (!reader.getButtonPressed())
+        if (!reader.getButtonPressed() || isButtonExecuting)
             return;
+
+        isButtonExecuting = true;
 
         setParkourTo(Material.CRACKED_STONE_BRICKS, isParkour1);
 
         new BukkitRunnable() {
             @Override
             public void run() {
-                setParkourTo(Material.AIR, isParkour1);
-                setParkourTo(Material.AIR, !isParkour1);
-                isParkour1 = !isParkour1;
+                setParkourTo(Material.STONE_BRICKS, !isParkour1);
             }
-        }.runTaskLater(this, 30); // 1.5s delay
+        }.runTaskLater(this, 15); // 1s delay
+
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                setParkourTo(Material.AIR, isParkour1);
+                isParkour1 = !isParkour1;
+                isButtonExecuting = false;
+            }
+        }.runTaskLater(this, 15); // 2s delay
     }
 
-    int[] lengths = {3, 3, 3, 4, 1, 1, 1, 1, 1, 1, 1, 3, 3};
 
     private void setParkourTo(Material material, boolean isSetting1) {
+        int parkourStartX2 = 265;
+        int parkourStartX1 = 259;
+        int parkourStartZ = 182;
+        int parkourY = 78;
+
         int start = isSetting1? parkourStartX1 : parkourStartX2;
+
+        // hard coded
+        int[] lengths = {3, 3, 3, 4, 1, 1, 1, 1, 1, 1, 1, 3, 3};
 
         int z = parkourStartZ;
         for (int i = 0; i < lengths.length; i++) {
@@ -213,6 +235,60 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
                     world.getBlockAt(new Location(world, x, parkourY, z)).setType(toSet);
                 }
                 z++;
+            }
+        }
+    }
+
+    private void setWalls() {
+        int wallsMinX = 258;
+        int wallsMaxX = 268;
+        int numSpaces = wallsMaxX - wallsMinX + 1;
+        int wallsStartZ = 88;
+        int wallsStartY = 73;
+        int wallsHeight = 4;
+        int wallsLength = 7;
+        int wallDistance = 5;
+        int numWalls = 5;
+//        int[] offsets = new int[] {1, 4, 4, 1, 5};
+        int[] offsets = new int[] {0, 0, 0, 0, 0};
+        boolean[] directions = new boolean[] {true, false, true, false, true};
+        // directions[n] is true if wall n starts on the left side (i.e. at a higher x)
+
+        if (reader.isLatestRotarySeen())
+            return;
+
+        int reading = reader.getLatestRotary();
+
+        if (reading == -1)
+            return;
+
+        int distanceMoved = (int) (numSpaces * 2.0 * reading / MAX_ROTARY_READING);
+
+        for (int wall = 0; wall < numWalls; wall++) {
+            int z = wallsStartZ + wall * wallDistance;
+            int offset = offsets[wall];
+            int startX = directions[wall]? wallsMinX + distanceMoved + offset :
+                    wallsMaxX - distanceMoved - offset;
+
+            while (startX > wallsMaxX)
+                startX -= numSpaces;
+            while (startX < wallsMinX)
+                startX += numSpaces;
+
+            int x = startX;
+
+            for (int l = 0; l < numSpaces; l++) {
+                Material mat = (l < wallsLength)? Material.STONE_BRICKS : Material.AIR;
+
+                for (int y = wallsStartY; y < wallsStartY + wallsHeight; y++) {
+                    world.getBlockAt(new Location(world, x, y, z)).setType(mat);
+                }
+
+                x += directions[wall]? 1 : -1;
+                if (x > wallsMaxX)
+                    x -= numSpaces;
+                if (x < wallsMinX)
+                    x += numSpaces;
             }
         }
     }
@@ -324,7 +400,6 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    // TODO: keep track of walking distance and sprinting distance
     private void checkRunDistances() {
         Collection<? extends Player> players = Bukkit.getOnlinePlayers();
 
