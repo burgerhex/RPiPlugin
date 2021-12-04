@@ -4,9 +4,9 @@ import grovepi
 import socket
 import time
 import threading
-import websockets
-import asyncio
-import random
+# import websockets
+# import asyncio
+# import random
 
 ROTARY_PORT = 2  # port A2
 BUTTON_PORT = 2  # port D2
@@ -106,25 +106,25 @@ def temp_recv_loop():
         time.sleep(SLEEP_TIME)
 
 
-async def counter(websocket, path):
-    # register(websocket) sends user_event() to websocket
-    print(f"new request: ws = {websocket}, path = {path}")
-    await websocket.send("welcome")
-    while True:
-        await asyncio.sleep(SLEEP_TIME)
-        rotary_reading = grovepi.analogRead(ROTARY_PORT)
-        await websocket.send(str(rotary_reading / 1023))
-
-
-async def serve():
-    server = await websockets.serve(counter, "0.0.0.0", PORT + 1)
-    await server.wait_closed()
+# async def counter(websocket, path):
+#     # register(websocket) sends user_event() to websocket
+#     print(f"new request: ws = {websocket}, path = {path}")
+#     await websocket.send("welcome")
+#     while True:
+#         await asyncio.sleep(SLEEP_TIME)
+#         rotary_reading = grovepi.analogRead(ROTARY_PORT)
+#         await websocket.send(str(rotary_reading / 1023))
+#
+#
+# async def serve():
+#     server = await websockets.serve(counter, "0.0.0.0", PORT + 1)
+#     await server.wait_closed()
 
 
 # asyncio.get_event_loop().run_until_complete(start_server)
 # asyncio.get_event_loop().run_forever()
-loop = asyncio.get_event_loop()
-loop.create_task(serve())
+# loop = asyncio.get_event_loop()
+# loop.create_task(serve())
 
 while True:
     with socket.socket() as sock:

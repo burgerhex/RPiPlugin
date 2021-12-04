@@ -203,7 +203,7 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
             public void run() {
                 setParkourTo(Material.STONE_BRICKS, !isParkour1);
             }
-        }.runTaskLater(this, 15); // 1s delay
+        }.runTaskLater(this, 15); // 0.75s delay
 
         new BukkitRunnable() {
             @Override
@@ -212,7 +212,7 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
                 isParkour1 = !isParkour1;
                 isButtonExecuting = false;
             }
-        }.runTaskLater(this, 15); // 2s delay
+        }.runTaskLater(this, 30); // 1.5s delay
     }
 
 
@@ -239,6 +239,8 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    private int prevWallDistance = -1;
+
     private void setWalls() {
         int wallsMinX = 258;
         int wallsMaxX = 268;
@@ -246,23 +248,28 @@ public final class RPiPlugin extends JavaPlugin implements Listener {
         int wallsStartZ = 88;
         int wallsStartY = 73;
         int wallsHeight = 4;
-        int wallsLength = 7;
+        int wallsLength = 8;
         int wallDistance = 5;
         int numWalls = 5;
-//        int[] offsets = new int[] {1, 4, 4, 1, 5};
-        int[] offsets = new int[] {0, 0, 0, 0, 0};
+        int[] offsets = new int[] {1, 4, 7, 2, 3};
+//        int[] offsets = new int[] {0, 0, 0, 0, 0};
         boolean[] directions = new boolean[] {true, false, true, false, true};
         // directions[n] is true if wall n starts on the left side (i.e. at a higher x)
 
-        if (reader.isLatestRotarySeen())
-            return;
+//        if (reader.isLatestRotarySeen())
+//            return;
 
         int reading = reader.getLatestRotary();
 
         if (reading == -1)
             return;
 
-        int distanceMoved = (int) (numSpaces * 2.0 * reading / MAX_ROTARY_READING);
+        int distanceMoved = (int) (numSpaces * (double) reading / MAX_ROTARY_READING);
+
+        if (distanceMoved == prevWallDistance)
+            return;
+
+        prevWallDistance = distanceMoved;
 
         for (int wall = 0; wall < numWalls; wall++) {
             int z = wallsStartZ + wall * wallDistance;

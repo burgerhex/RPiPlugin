@@ -10,31 +10,27 @@
         function init() {
             const jumpCanvas = document.getElementById("canvas1");
             const runCanvas = document.getElementById("canvas2");
-            const randomCanvas = document.getElementById("canvas3");
+            // const randomCanvas = document.getElementById("canvas3");
 
-            const jumpSmoothie = new SmoothieChart();
-            const runSmoothie = new SmoothieChart();
-            const randomSmoothie = new SmoothieChart({ minValue: 0, maxValue: 1});
+            const jumpSmoothie = new SmoothieChart({millisPerPixel: 40});
+            const runSmoothie = new SmoothieChart({millisPerPixel: 40});
+            // const randomSmoothie = new SmoothieChart({ minValue: 0, maxValue: 1});
 
             jumpSmoothie.streamTo(jumpCanvas, 500);
             runSmoothie.streamTo(runCanvas, 500);
-            randomSmoothie.streamTo(randomCanvas, 1000);
+            // randomSmoothie.streamTo(randomCanvas, 1000);
 
             const userColors = {}
             const jumpLines = {};
             const runLines = {};
-            const randomLine = new TimeSeries();
+            // const randomLine = new TimeSeries();
 
-            randomSmoothie.addTimeSeries(randomLine,
-                { strokeStyle: 'rgb(0, 255, 0)', fillStyle: 'rgba(0, 255, 0, 0.3)', lineWidth: 3 });
+            // randomSmoothie.addTimeSeries(randomLine,
+            //     { strokeStyle: 'rgb(0, 255, 0)', fillStyle: 'rgba(0, 255, 0, 0.3)', lineWidth: 3 });
 
-            setInterval(() => {
-                randomLine.append(new Date().getTime(), Math.random());
-            }, 1000);
-
-            // TODO: do jump stuff here. have a line for each player, add new ones when new players
-            // are sent. messages contain players and events, i.e. burgerhex - jump
-            // then here we add 1 to burgerhex's jumps
+            // setInterval(() => {
+            //     randomLine.append(new Date().getTime(), Math.random());
+            // }, 1000);
 
             // const socket = new WebSocket("ws://avivshai-pi:57945");
             // const socket = new WebSocket("ws://Avivs-MacBook-Pro.local:57945");
@@ -54,10 +50,10 @@
                 console.log(jumpData);
                 console.log(runData);
                 if (jumpData !== undefined) {
-                    console.log("parsing jump data");
+                    // console.log("parsing jump data");
                     for (const user in jumpData) {
                         const jumps = jumpData[user];
-                        console.log("user " + user + ", jumps = " + jumps);
+                        // console.log("user " + user + ", jumps = " + jumps);
                         if (jumpLines[user] === undefined) {
                             jumpLines[user] = new TimeSeries();
                             let r = 0, g = 0, b = 0;
@@ -66,6 +62,11 @@
                                 g = Math.floor(Math.random() * 256);
                                 b = Math.floor(Math.random() * 256);
                                 userColors[user] = [r, g, b];
+
+                                const colorP = document.createElement('p');
+                                colorP.innerText = user;
+                                colorP.style.color = "rgb(" + r + ", " + g + ", " + b + ")";
+                                document.getElementById("color_list").appendChild(colorP);
                             } else {
                                 [r, g, b] = userColors[user];
                             }
@@ -78,10 +79,10 @@
                     }
                 }
                 if (runData !== undefined) {
-                    console.log("parsing run data");
+                    // console.log("parsing run data");
                     for (const user in runData) {
                         const distance = runData[user];
-                        console.log("user " + user + ", distance = " + distance);
+                        // console.log("user " + user + ", distance = " + distance);
                         if (runLines[user] === undefined) {
                             runLines[user] = new TimeSeries();
                             let r = 0, g = 0, b = 0;
@@ -90,6 +91,11 @@
                                 g = Math.floor(Math.random() * 256);
                                 b = Math.floor(Math.random() * 256);
                                 userColors[user] = [r, g, b];
+
+                                const colorP = document.createElement('p');
+                                colorP.innerText = user;
+                                colorP.style.color = "rgb(" + r + ", " + g + ", " + b + ")";
+                                document.getElementById("color_list").appendChild(colorP);
                             } else {
                                 [r, g, b] = userColors[user];
                             }
@@ -110,9 +116,14 @@
 </head>
 <body onload="init()">
 
-<canvas id="canvas1" width="200" height="100"></canvas>
-<canvas id="canvas2" width="200" height="100"></canvas>
-<canvas id="canvas3" width="200" height="100"></canvas>
+<h1>User Statistics</h1>
+<h2>Jumps</h2>
+<canvas id="canvas1" width="400" height="150"></canvas>
+<h2>Sprint Distance (m)</h2>
+<canvas id="canvas2" width="400" height="150"></canvas>
+<!--<canvas id="canvas3" width="200" height="100"></canvas>-->
+<h3>Color Key</h3>
+<div id="color_list"></div>
 
 </body>
 </html>
